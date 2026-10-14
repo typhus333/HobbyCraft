@@ -185,120 +185,110 @@ public struct ProjectDashboardView: View {
 
     // MARK: - Project Card
     private func projectCard(for project: HobbyProject) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                // Category Icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(project.displayColor.opacity(0.15))
-                        .frame(width: 48, height: 48)
+        HStack(alignment: .center, spacing: 14) {
+            // Square Photo or Icon to the Left of all information
+            leadingSquareView(for: project)
 
-                    Image(systemName: project.iconName)
-                        .font(.system(size: 22))
-                        .foregroundStyle(project.displayColor)
+            // All Information on the Right
+            VStack(alignment: .leading, spacing: 6) {
+                // Category & Status
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(project.categoryName)
+                            .font(.caption2.bold())
+                            .foregroundStyle(project.displayColor)
+                            .textCase(.uppercase)
+
+                        Text(project.title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    StatusBadgeView(status: project.status)
                 }
 
-                // Title & Category
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(project.categoryName)
-                        .font(.caption2.bold())
-                        .foregroundStyle(project.displayColor)
-                        .textCase(.uppercase)
-
-                    Text(project.title)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-
+                // Current Step & Tracked Duration
+                HStack {
                     if let currentStep = project.currentActiveStep {
                         Text("Current: \(currentStep.name)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
-                }
 
-                Spacer()
-
-                // Status Badge & Total Time
-                VStack(alignment: .trailing, spacing: 4) {
-                    StatusBadgeView(status: project.status)
+                    Spacer()
 
                     Text(project.formattedDuration)
-                        .font(.subheadline.bold().monospacedDigit())
+                        .font(.caption.bold().monospacedDigit())
                         .foregroundStyle(.primary)
                 }
-            }
 
-            // Latest Project Photo Preview
-            if let latestPhoto = project.latestPhoto,
-               let imageData = latestPhoto.thumbnailData ?? latestPhoto.photoData {
-                ZStack(alignment: .bottomLeading) {
-                    PlatformImageView(data: imageData)
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 150)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                // Progress Bar
+                ProgressView(value: project.progressPercentage)
+                    .tint(project.displayColor)
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "camera.fill")
-                            .font(.caption2)
-
-                        if let step = latestPhoto.step {
-                            Text(step.name)
-                                .font(.caption2.bold())
-                                .lineLimit(1)
-                        } else {
-                            Text("Latest Photo")
-                                .font(.caption2.bold())
-                        }
-
-                        if !latestPhoto.caption.isEmpty {
-                            Text("•")
-                                .font(.caption2)
-                            Text(latestPhoto.caption)
-                                .font(.caption2)
-                                .lineLimit(1)
-                        }
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.65))
-                    .clipShape(Capsule())
-                    .padding(8)
-                }
-            }
-
-            // Progress Bar
-            ProgressView(value: project.progressPercentage)
-                .tint(project.displayColor)
-
-            HStack {
-                Text("\(project.completedStepsCount)/\(project.totalStepsCount) steps")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                if let photoCount = project.photos?.count, photoCount > 0 {
-                    Text("•")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                    Label("\(photoCount)", systemImage: "photo.stack")
+                // Step & Photo counts
+                HStack {
+                    Text("\(project.completedStepsCount)/\(project.totalStepsCount) steps")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+
+                    if let photoCount = project.photos?.count, photoCount > 0 {
+                        Text("•")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        Label("\(photoCount)", systemImage: "photo.stack")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text("\(Int(project.progressPercentage * 100))%")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.secondary)
                 }
-
-                Spacer()
-
-                Text("\(Int(project.progressPercentage * 100))%")
-                    .font(.caption2.bold())
-                    .foregroundStyle(.secondary)
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - Square Photo / Icon
+    private func leadingSquareView(for project: HobbyProject) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            if let latestPhoto = project.latestPhoto,
+               let imageData = latestPhoto.thumbnailData ?? latestPhoto.photoData {
+                PlatformImageView(data: imageData)
+                    .scaledToFill()
+                    .frame(width: 92, height: 92)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                // Subtle category indicator badge on photo corner
+                Image(systemName: project.iconName)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(4)
+                    .background(project.displayColor.opacity(0.85))
+                    .clipShape(Circle())
+                    .padding(4)
+            } else {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(project.displayColor.opacity(0.15))
+                    .frame(width: 92, height: 92)
+
+                Image(systemName: project.iconName)
+                    .font(.system(size: 32))
+                    .foregroundStyle(project.displayColor)
+                    .frame(width: 92, height: 92)
+            }
+        }
+        .frame(width: 92, height: 92)
     }
 
     // MARK: - Empty State
