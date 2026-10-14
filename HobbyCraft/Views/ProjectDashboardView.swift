@@ -210,20 +210,34 @@ public struct ProjectDashboardView: View {
                     StatusBadgeView(status: project.status)
                 }
 
-                // Current Step & Tracked Duration
-                HStack {
+                // Current Step & Big Prominent Tracked Duration Badge
+                HStack(alignment: .center) {
                     if let currentStep = project.currentActiveStep {
-                        Text("Current: \(currentStep.name)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("CURRENT STEP")
+                                .font(.system(size: 8.5, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                            Text(currentStep.name)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
 
                     Spacer()
 
-                    Text(project.formattedDuration)
-                        .font(.caption.bold().monospacedDigit())
-                        .foregroundStyle(.primary)
+                    // Big Prominent Project Time Badge
+                    HStack(spacing: 5) {
+                        Image(systemName: "clock.fill")
+                            .font(.subheadline.weight(.bold))
+                        Text(project.formattedDuration)
+                            .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(project.displayColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(project.displayColor.opacity(0.16))
+                    .clipShape(Capsule())
                 }
 
                 // Progress Bar
