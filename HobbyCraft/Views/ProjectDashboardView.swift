@@ -230,6 +230,47 @@ public struct ProjectDashboardView: View {
                 }
             }
 
+            // Latest Project Photo Preview
+            if let latestPhoto = project.latestPhoto,
+               let imageData = latestPhoto.thumbnailData ?? latestPhoto.photoData {
+                ZStack(alignment: .bottomLeading) {
+                    PlatformImageView(data: imageData)
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 150)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "camera.fill")
+                            .font(.caption2)
+
+                        if let step = latestPhoto.step {
+                            Text(step.name)
+                                .font(.caption2.bold())
+                                .lineLimit(1)
+                        } else {
+                            Text("Latest Photo")
+                                .font(.caption2.bold())
+                        }
+
+                        if !latestPhoto.caption.isEmpty {
+                            Text("•")
+                                .font(.caption2)
+                            Text(latestPhoto.caption)
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.65))
+                    .clipShape(Capsule())
+                    .padding(8)
+                }
+            }
+
             // Progress Bar
             ProgressView(value: project.progressPercentage)
                 .tint(project.displayColor)
