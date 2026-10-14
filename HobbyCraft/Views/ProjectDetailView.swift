@@ -8,8 +8,7 @@ public struct ProjectDetailView: View {
 
     @Bindable public var project: HobbyProject
 
-    @State private var showingAddStepAlert = false
-    @State private var newStepName = ""
+    @State private var showingAddStepSheet = false
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
     @State private var showingSaveTimerSheet = false
@@ -65,13 +64,9 @@ public struct ProjectDetailView: View {
                 }
             }
         }
-        .alert("Add Step", isPresented: $showingAddStepAlert) {
-            TextField("Step Name (e.g. Clear Coating)", text: $newStepName)
-            Button("Add") {
-                addNewStep()
-            }
-            Button("Cancel", role: .cancel) {
-                newStepName = ""
+        .sheet(isPresented: $showingAddStepSheet) {
+            AddStepSheet(categoryName: project.categoryName) { name, estimatedMinutes, notes in
+                addNewStep(name: name, estimatedMinutes: estimatedMinutes, notes: notes)
             }
         }
         .alert("Delete Project?", isPresented: $showingDeleteAlert) {
@@ -258,33 +253,67 @@ public struct ProjectDetailView: View {
                 Spacer()
 
                 Button {
-                    showingAddStepAlert = true
+                    showingAddStepSheet = true
                 } label: {
                     Label("Add Step", systemImage: "plus")
                         .font(.subheadline.bold())
                 }
             }
 
-            VStack(spacing: 4) {
-                ForEach(project.sortedSteps) { step in
-                    StepRowView(step: step, project: project)
-                    if step.id != project.sortedSteps.last?.id {
-                        Divider()
+            if project.sortedSteps.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "list.bullet.clipboard")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No steps added yet")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("Add your first step to start tracking time and progress on this project.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        showingAddStepSheet = true
+                    } label: {
+                        Label("Add Step", systemImage: "plus.circle.fill")
+                            .font(.subheadline.bold())
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(project.displayColor.opacity(0.15))
+                            .foregroundStyle(project.displayColor)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.top, 4)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .background(Color.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else {
+                VStack(spacing: 4) {
+                    ForEach(project.sortedSteps) { step in
+                        StepRowView(step: step, project: project)
+                        if step.id != project.sortedSteps.last?.id {
+                            Divider()
+                        }
                     }
                 }
+                .padding()
+                .background(Color.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .padding()
-            .background(Color.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 
-    private func addNewStep() {
-        guard !newStepName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    private func addNewStep(name: String, estimatedMinutes: Int?, notes: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
         let nextIndex = project.sortedSteps.count
         let step = ProjectStep(
-            name: newStepName.trimmingCharacters(in: .whitespacesAndNewlines),
+            name: trimmed,
             orderIndex: nextIndex,
+            notes: notes,
+            estimatedMinutes: estimatedMinutes,
             project: project
         )
         modelContext.insert(step)
@@ -294,7 +323,6 @@ public struct ProjectDetailView: View {
         project.steps?.append(step)
         project.lastModifiedDate = Date.now
         try? modelContext.save()
-        newStepName = ""
     }
 }
 

@@ -16,8 +16,9 @@ public struct NewProjectView: View {
     @State private var hasDueDate: Bool = false
     @State private var dueDate: Date = Date.now.addingTimeInterval(86400 * 14)
 
+    // New projects start with NO steps by default
     @State private var steps: [String] = []
-    @State private var newStepInput: String = ""
+    @State private var showingAddStepSheet = false
 
     private let availableIcons = [
         "cube.fill", "paintbrush.fill", "hammer.fill", "airplane", "scissors",
@@ -33,14 +34,14 @@ public struct NewProjectView: View {
     public var body: some View {
         NavigationStack {
             Form {
-                // Template Selection
-                Section("Choose Hobby Template") {
-                    Picker("Template", selection: $selectedTemplateIndex) {
+                // Category / Preset Selection (sets icon & color theme, but does NOT add default steps)
+                Section("Hobby Category") {
+                    Picker("Category", selection: $selectedTemplateIndex) {
                         ForEach(0..<DefaultTemplates.builtIn.count, id: \.self) { index in
                             let template = DefaultTemplates.builtIn[index]
                             Label(template.name, systemImage: template.icon).tag(index)
                         }
-                        Text("Custom (Blank)").tag(DefaultTemplates.builtIn.count)
+                        Text("Custom").tag(DefaultTemplates.builtIn.count)
                     }
                     .pickerStyle(.menu)
                     .onChange(of: selectedTemplateIndex) { _, newIndex in
@@ -51,7 +52,7 @@ public struct NewProjectView: View {
                 // Basic Details
                 Section("Project Details") {
                     TextField("Project Title (e.g. Iron Man Helmet)", text: $title)
-                    TextField("Category", text: $categoryName)
+                    TextField("Category Name", text: $categoryName)
                     TextField("Description (optional)", text: $description, axis: .vertical)
                         .lineLimit(2...4)
                 }
@@ -98,27 +99,40 @@ public struct NewProjectView: View {
                     }
                 }
 
-                // Process Steps
-                Section("Project Steps (\(steps.count))") {
-                    ForEach(steps.indices, id: \.self) { index in
-                        HStack {
-                            Text("\(index + 1).")
-                                .font(.footnote.bold())
+                // Optional Steps List (Starts with 0 steps; user can choose to add steps with dropdown)
+                Section {
+                    if steps.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("No steps added yet")
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            Text(steps[index])
-                            Spacer()
+                            Text("This project will start with no steps. You can add steps as you work from the project screen using the step type dropdown.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
+                        .padding(.vertical, 4)
+                    } else {
+                        ForEach(steps.indices, id: \.self) { index in
+                            HStack {
+                                Text("\(index + 1).")
+                                    .font(.footnote.bold())
+                                    .foregroundStyle(.secondary)
+                                Text(steps[index])
+                                Spacer()
+                            }
+                        }
+                        .onDelete(perform: deleteSteps)
+                        .onMove(perform: moveSteps)
                     }
-                    .onDelete(perform: deleteSteps)
-                    .onMove(perform: moveSteps)
 
-                    HStack {
-                        TextField("Add custom step", text: $newStepInput)
-                        Button("Add") {
-                            addCustomStep()
-                        }
-                        .disabled(newStepInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button {
+                        showingAddStepSheet = true
+                    } label: {
+                        Label("Add Step...", systemImage: "plus.circle")
+                            .font(.subheadline.weight(.semibold))
                     }
+                } header: {
+                    Text("Project Steps (\(steps.count))")
                 }
             }
             .navigationTitle("New Project")
@@ -140,15 +154,23 @@ public struct NewProjectView: View {
                 }
 
                 #if os(iOS)
-                ToolbarItem(placement: .topBarLeading) {
-                    EditButton()
+                if !steps.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
+                        EditButton()
+                    }
                 }
                 #endif
             }
-            .onAppear {
-                if steps.isEmpty {
-                    applySelectedTemplate(at: 0)
+            .sheet(isPresented: $showingAddStepSheet) {
+                AddStepSheet(categoryName: categoryName) { newName, _, _ in
+                    let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        steps.append(trimmed)
+                    }
                 }
+            }
+            .onAppear {
+                applySelectedTemplate(at: 0)
             }
         }
     }
@@ -159,20 +181,12 @@ public struct NewProjectView: View {
             categoryName = template.name
             iconName = template.icon
             colorHex = template.colorHex
-            steps = template.stepNames
+            // NOTE: We deliberately do NOT populate `steps` with default steps!
         } else {
             categoryName = "Custom"
             iconName = "hammer.fill"
             colorHex = "#FF9500"
-            steps = ["Design & Prep", "Execution", "Finishing"]
         }
-    }
-
-    private func addCustomStep() {
-        let trimmed = newStepInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        steps.append(trimmed)
-        newStepInput = ""
     }
 
     private func deleteSteps(at offsets: IndexSet) {
